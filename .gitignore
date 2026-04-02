@@ -1,0 +1,22 @@
+# Wails / binários
+build/
+*.exe
+*.dll
+.DS_Store
+
+# Frontend — regenere com: cd frontend && npm install && npm run build
+frontend/node_modules/
+frontend/dist/
+
+# Go
+*.test
+*.out
+vendor/
+
+# IDE / ambiente
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+.env
+.env.local
