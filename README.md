@@ -2,6 +2,8 @@
 
 Benchmark **paralelo** de leitura e escrita em **dois volumes** (por exemplo, dois pendrives), usando I/O **sem cache** do sistema, para uma medição mais próxima da velocidade real do dispositivo (~128 MB por drive por execução).
 
+**Repositório no GitHub:** [github.com/diegofagundes123/DualBench](https://github.com/diegofagundes123/DualBench)
+
 ---
 
 ## Passo a passo para o usuário
@@ -92,7 +94,7 @@ ls /media/seu-usuario/
 ### B.2 Clonar e subir
 
 ```bash
-git clone <URL_DO_SEU_REPOSITORIO>
+git clone https://github.com/diegofagundes123/DualBench.git
 cd DualBench
 xhost +local:docker
 docker compose up --build
@@ -140,7 +142,7 @@ Consulte a [documentação oficial do Wails](https://wails.io/docs/gettingstarte
 ### C.2 Clonar e compilar interface + app
 
 ```bash
-git clone <URL_DO_SEU_REPOSITORIO>
+git clone https://github.com/diegofagundes123/DualBench.git
 cd DualBench
 cd frontend && npm install && npm run build && cd ..
 ```
