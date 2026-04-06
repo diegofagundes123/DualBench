@@ -17,9 +17,11 @@ Benchmark **paralelo** de leitura e escrita em **dois volumes** (por exemplo, do
 
 | Forma | Ideal para |
 |--------|------------|
-| [**Baixar o executável**](#opção-a-baixar-o-executável-releases) | Quem só quer rodar o app (Linux/Windows conforme releases). |
+| [**Baixar o executável (Releases)**](https://github.com/diegofagundes123/DualBench/releases) | Quem só quer rodar o app — abre a página oficial de releases (veja nota abaixo se estiver vazia). |
 | [**Docker**](#opção-b-rodar-com-docker-linux) | Linux: isola Go, Node e Wails; não instala toolchain no sistema. |
 | [**Clonar e compilar**](#opção-c-clonar-e-gerar-o-executável) | Quem já tem ou quer instalar Go, Node e Wails. |
+
+**Sobre o link da tabela:** o endereço antigo (`#opção-a-…`) só tentava **rolar** o README dentro da mesma página; em alguns navegadores isso quase não se nota. Além disso, [**ainda não há releases com arquivo anexado**](https://github.com/diegofagundes123/DualBench/releases) — quando publicar a primeira release, os downloads aparecerão nessa página.
 
 ### 3. Abrir o DualBench
 
@@ -53,7 +55,8 @@ ls /media/seu-usuario/
 
 ## Opção A: Baixar o executável (Releases)
 
-1. No GitHub do projeto, abra **Releases** e baixe o arquivo da sua plataforma (ex.: `DualBench` para Linux, `DualBench.exe` para Windows), se disponível.
+1. Abra a página **[Releases](https://github.com/diegofagundes123/DualBench/releases)** do repositório (menu direito **Releases** no GitHub ou link anterior). Baixe o arquivo da sua plataforma (**Assets** na release), por exemplo `DualBench` (Linux) ou `DualBench.exe` (Windows), **quando existir**.
+   - Se a lista estiver vazia (“No releases published”), ainda não há executável pronto: use [Opção B](#opção-b-rodar-com-docker-linux) ou [Opção C](#opção-c-clonar-e-gerar-o-executável).
 2. **Linux:** antes da primeira execução, instale as bibliotecas gráficas usadas pelo Wails (nomes podem variar um pouco pela distribuição):
 
    ```bash
