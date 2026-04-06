@@ -63,17 +63,22 @@ ls /media/seu-usuario/
    sudo apt install libwebkit2gtk-4.1-0 libgtk-3-0
    ```
 
-3. Dê permissão de execução (Linux):
+3. Dê permissão de execução (Linux). Arquivos baixados pelo navegador **não** vêm como executáveis; sem o `chmod`, o gerenciador de arquivos pode mostrar *“Não existe aplicativo instalado para os arquivos ‘Executável’”* ao dar duplo clique.
 
    ```bash
    chmod +x DualBench
    ```
 
-4. Execute:
+   Ajuste o nome se o download tiver sufixo, por exemplo `DualBench (1)`.
+
+4. Execute **pelo terminal** (recomendado após baixar):
 
    ```bash
+   cd ~/Downloads
    ./DualBench
    ```
+
+   Se o nome tiver espaços: `./"DualBench (1)"`. Depois do `chmod +x`, em alguns ambientes o duplo clique no arquivo também passa a oferecer executar.
 
 > **Publicar releases:** quem mantém o repositório pode gerar o binário com [Opção C](#opção-c-clonar-e-gerar-o-executável) e anexar o artefato em uma [Release](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository) do GitHub.
 
@@ -180,6 +185,7 @@ wails dev
 | `stat ... no such file` | Verifique o caminho com `lsblk -f` ou `ls /media/...`; confira nome e se o pendrive está montado. |
 | Sem permissão em `/media/...` | Ajuste permissões ou rode o app com usuário que tenha acesso à montagem. |
 | Build Linux falha pedindo `webkit2gtk-4.0` | Use `-tags webkit2_41` no `wails build` (distribuições com WebKit 4.1). |
+| Download da Release: *“Não existe aplicativo… Executável”* (Arquivos) | Rode `chmod +x` no arquivo e execute com `./DualBench` no terminal (pasta `Downloads` ou onde salvou). |
 
 ---
 
