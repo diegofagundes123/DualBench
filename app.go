@@ -15,12 +15,12 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 const (
-	eventBenchmarkProgress = "benchmark:progress"
 	tempBenchFileName      = ".dualbench_uncached.dat"
+	eventBenchmarkProgress = "benchmark:progress"
 )
 
 type BenchProgressPayload struct {
@@ -63,13 +63,23 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
+func (a *App) StartDualBenchmark(drivePathA, drivePathB string) (BenchmarkSummary, error) {
+	var empty BenchmarkSummary
+	if a.ctx == nil {
+		return empty, errors.New("aplicativo ainda não inicializou o contexto")
+	}
+	return dualBenchmark(a.ctx, drivePathA, drivePathB, func(p BenchProgressPayload) {
+		wailsruntime.EventsEmit(a.ctx, eventBenchmarkProgress, p)
+	})
+}
+
 type progressAggregator struct {
 	mu sync.Mutex
 	d  [2]DriveSlot
 }
 
 func newProgressAggregator() *progressAggregator {
-	return &progressAggregator{}
+	return new(progressAggregator)
 }
 
 func (p *progressAggregator) store(slot int, phase string, pct float64, speedMB float64) {
@@ -88,13 +98,10 @@ func (p *progressAggregator) snapshot() BenchProgressPayload {
 	}
 }
 
-// StartDualBenchmark executa escrita e leitura sem cache nos dois volumes em paralelo (duas goroutines + WaitGroup).
-// O progresso é emitido via runtime.EventsEmit para o React (evento benchmark:progress).
-func (a *App) StartDualBenchmark(drivePathA, drivePathB string) (BenchmarkSummary, error) {
+// dualBenchmark executa escrita e leitura sem cache nos dois volumes em paralelo.
+// Se emit != nil, snapshots periódicos são enviados (~125 ms) até concluir.
+func dualBenchmark(ctx context.Context, drivePathA, drivePathB string, emit func(BenchProgressPayload)) (BenchmarkSummary, error) {
 	var empty BenchmarkSummary
-	if a.ctx == nil {
-		return empty, errors.New("aplicativo ainda não inicializou o contexto")
-	}
 
 	pathA := normalizeDriveRoot(drivePathA)
 	pathB := normalizeDriveRoot(drivePathB)
@@ -111,34 +118,35 @@ func (a *App) StartDualBenchmark(drivePathA, drivePathB string) (BenchmarkSummar
 	totalBytes := benchTotalBytes(align, chunk)
 
 	agg := newProgressAggregator()
-	ctxEmit, cancelEmit := context.WithCancel(a.ctx)
+	ctxEmit, cancelEmit := context.WithCancel(ctx)
 	defer cancelEmit()
 
-	go func() {
-		t := time.NewTicker(125 * time.Millisecond)
-		defer t.Stop()
-		for {
-			select {
-			case <-ctxEmit.Done():
-				return
-			case <-t.C:
-				runtime.EventsEmit(a.ctx, eventBenchmarkProgress, agg.snapshot())
+	if emit != nil {
+		go func() {
+			t := time.NewTicker(125 * time.Millisecond)
+			defer t.Stop()
+			for {
+				select {
+				case <-ctxEmit.Done():
+					return
+				case <-t.C:
+					emit(agg.snapshot())
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	var wg sync.WaitGroup
 	var sum1, sum2 DriveSummary
 
-	// sync.WaitGroup: aguarda as duas goroutines de benchmark antes de devolver o resultado ao frontend.
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		sum1 = benchOneDrive(a.ctx, pathA, 0, totalBytes, chunk, agg)
+		sum1 = benchOneDrive(ctx, pathA, 0, totalBytes, chunk, agg)
 	}()
 	go func() {
 		defer wg.Done()
-		sum2 = benchOneDrive(a.ctx, pathB, 1, totalBytes, chunk, agg)
+		sum2 = benchOneDrive(ctx, pathB, 1, totalBytes, chunk, agg)
 	}()
 
 	wg.Wait()
@@ -146,13 +154,14 @@ func (a *App) StartDualBenchmark(drivePathA, drivePathB string) (BenchmarkSummar
 
 	agg.store(0, "done", 100, 0)
 	agg.store(1, "done", 100, 0)
-	runtime.EventsEmit(a.ctx, eventBenchmarkProgress, agg.snapshot())
+	if emit != nil {
+		emit(agg.snapshot())
+	}
 
 	return BenchmarkSummary{Drive1: sum1, Drive2: sum2}, nil
 }
 
 // benchOneDrive: por drive, sequência escrita → leitura no mesmo arquivo temporário.
-// Velocidade “instantânea” (MB/s) usa janela ~125 ms entre amostras; médias finais usam duração total da fase.
 func benchOneDrive(ctx context.Context, root string, slot int, total int64, chunk int, agg *progressAggregator) DriveSummary {
 	sum := DriveSummary{Path: root}
 	tmp := filepath.Join(root, tempBenchFileName)
@@ -277,7 +286,6 @@ func defaultChunkSize(align int) int {
 	return want
 }
 
-// benchTotalBytes ajusta o tamanho para múltiplos de align e de chunk (requisito de I/O direto).
 func benchTotalBytes(align, chunk int) int64 {
 	const want = int64(128) * 1024 * 1024
 	n := want - (want % int64(align))
@@ -298,6 +306,11 @@ func normalizeDriveRoot(p string) string {
 		if len(p) == 2 && p[1] == ':' {
 			p = p + `\`
 		}
+		return p
+	}
+	// Linux/macOS: montagens são absolutas; sem "/" o path vira relativo ao CWD e o stat falha.
+	if p != "" && p != "." && !strings.HasPrefix(p, "/") && !strings.HasPrefix(p, ".") {
+		p = "/" + p
 	}
 	return p
 }
@@ -313,7 +326,6 @@ func ensureDirRoot(path string) error {
 	return nil
 }
 
-// alignedBuffer devolve slice alinhado a minDirectIOAlignment() para buffer de Read/Write sem cache.
 func alignedBuffer(size int) []byte {
 	align := minDirectIOAlignment()
 	if size%align != 0 {

@@ -215,3 +215,13 @@
   font-size: 0.85rem;
   margin-bottom: 1rem;
 }
+
+.banner-info {
+  background: rgba(88, 166, 255, 0.1);
+  border: 1px solid rgba(88, 166, 255, 0.35);
+  color: #8cb8ff;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}

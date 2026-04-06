@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { StartDualBenchmark } from '../wailsjs/go/main/App.js'
 import { EventsOff, EventsOn } from '../wailsjs/runtime/runtime.js'
+import { isWailsGoReady } from './wailsBridge.js'
 import './App.css'
 
 const EVT = 'benchmark:progress'
+
+/** True quando o bundle foi gerado com `npm run build` (janela Wails com assets embutidos). */
+const viteDev = import.meta.env.DEV
 
 const emptySlot = () => ({
   phase: 'idle',
@@ -14,6 +18,8 @@ const emptySlot = () => ({
 export default function App() {
   const [driveA, setDriveA] = useState('E:')
   const [driveB, setDriveB] = useState('F:')
+  const [bridgeReady, setBridgeReady] = useState(() => isWailsGoReady())
+  const [bridgeMsg, setBridgeMsg] = useState(' 128.')
   const [loading, setLoading] = useState(false)
   const [uiError, setUiError] = useState('')
   const [progress, setProgress] = useState({
@@ -22,6 +28,49 @@ export default function App() {
     drive2: emptySlot(),
   })
   const [results, setResults] = useState(null)
+
+  useEffect(() => {
+    if (bridgeReady) return
+    const tEarly = window.setTimeout(() => {
+      if (viteDev) {
+        setBridgeMsg(
+          'Modo wails dev + Vite: no Docker o bridge (window.go) muitas vezes não carrega. Pare com Ctrl+C na pasta DualBench e rode: docker compose down && docker compose up --build — isso gera o binário com interface embutida e costuma funcionar.',
+        )
+      } else {
+        setBridgeMsg('Ainda conectando ao Wails… aguarde alguns segundos.')
+      }
+    }, 12_000)
+    const tSoft = window.setTimeout(() => {
+      if (!viteDev) {
+        setBridgeMsg(
+          'Ainda sem bridge. Confirme que abriu a janela do DualBench (não o navegador). No host: xhost +local:docker',
+        )
+      }
+    }, 45_000)
+    const tHard = window.setTimeout(() => {
+      setBridgeMsg(
+        viteDev
+          ? 'Sair do wails dev no Docker: docker compose down, depois docker compose up (serviço padrão compila e executa ./build/bin/DualBench). Não use --profile dev.'
+          : 'Sem bridge após 2 min: use só a janela do app; não abra http://127.0.0.1:5173 no navegador. Tente docker compose down && docker compose up --build.',
+      )
+    }, 120_000)
+    const id = window.setInterval(() => {
+      if (isWailsGoReady()) {
+        setBridgeReady(true)
+        setBridgeMsg('')
+        window.clearInterval(id)
+        window.clearTimeout(tEarly)
+        window.clearTimeout(tSoft)
+        window.clearTimeout(tHard)
+      }
+    }, 100)
+    return () => {
+      window.clearInterval(id)
+      window.clearTimeout(tEarly)
+      window.clearTimeout(tSoft)
+      window.clearTimeout(tHard)
+    }
+  }, [bridgeReady])
 
   useEffect(() => {
     const off = EventsOn(EVT, (payload) => {
@@ -66,7 +115,7 @@ export default function App() {
     }
   }, [driveA, driveB])
 
-  const disabled = loading
+  const disabled = loading || !bridgeReady
 
   return (
     <div className="app">
@@ -76,6 +125,16 @@ export default function App() {
         (medição mais próxima da velocidade real do pendrive). ~128&nbsp;MB por drive — aguarde o término.
       </p>
 
+      {!bridgeReady && bridgeMsg ? (
+        <div
+          className={
+            bridgeMsg.includes('2 min') || bridgeMsg.includes('Sair do wails dev') ? 'banner-err' : 'banner-info'
+          }
+        >
+          {bridgeMsg}
+        </div>
+      ) : null}
+      {!bridgeReady && !bridgeMsg ? <div className="banner-info">Conectando ao Wails…</div> : null}
       {uiError ? <div className="banner-err">{uiError}</div> : null}
 
       <div className="grid">

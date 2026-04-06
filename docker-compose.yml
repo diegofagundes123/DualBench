@@ -1,0 +1,39 @@
+services:
+  app:
+    build: .
+    container_name: dualbench
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /media:/media
+      - /mnt:/mnt
+    environment:
+      DISPLAY: ${DISPLAY}
+      GOFLAGS: -buildvcs=false
+      WEBKIT_DISABLE_COMPOSITING_MODE: "1"
+    network_mode: host
+    stdin_open: true
+    tty: true
+    command: ["/bin/sh", "/app/docker-desktop.sh"]
+
+  # Hot-reload no Docker (bridge JS pode falhar; prefira o serviço app acima):
+  # docker compose run --rm -it app-dev
+  app-dev:
+    build: .
+    container_name: dualbench-dev
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /media:/media
+      - /mnt:/mnt
+    environment:
+      DISPLAY: ${DISPLAY}
+      GOFLAGS: -buildvcs=false
+      WEBKIT_DISABLE_COMPOSITING_MODE: "1"
+    network_mode: host
+    stdin_open: true
+    tty: true
+    command: wails dev
+    profiles: ["dev"]
